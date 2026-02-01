@@ -220,7 +220,7 @@ def parallel_encode_mp3s_to_m4a(input_folder, output_folder, max_workers=None):
                 print(f"Error encoding {out_file}: {e}")
 
     # Return sorted list of .m4a files
-    return sorted(results)
+    return sorted(results), mp3_files
 
 def convert_mp3_chapters_to_m4b(input_folder, output_file, book_metadata=None):
     """
@@ -230,12 +230,12 @@ def convert_mp3_chapters_to_m4b(input_folder, output_file, book_metadata=None):
       3) Create concat list
       4) Use ffmpeg to produce final M4B
     """
-    m4a_files = parallel_encode_mp3s_to_m4a(input_folder, input_folder)
+    m4a_files, mp3_files = parallel_encode_mp3s_to_m4a(input_folder, input_folder)
 
     metadata_file = os.path.join(input_folder, "chapters.ffmetadata")
     list_file = os.path.join(input_folder, "concat_list.txt")
 
-    create_ffmetadata(m4a_files, metadata_file, book_metadata=book_metadata)
+    create_ffmetadata(mp3_files, metadata_file, book_metadata=book_metadata)
     create_concat_list(m4a_files, list_file)
 
     # 1) Declare the first two inputs (concat list + ffmetadata)
