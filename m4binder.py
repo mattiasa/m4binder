@@ -185,6 +185,15 @@ def encode_mp3_to_m4a(mp3_file, out_file):
     ]
     subprocess.run(cmd, check=True)
 
+
+def print_progress_bar(index, total, label=""):
+    n_bar = 50  # Progress bar width
+    progress = index / total
+    sys.stdout.write('\r')
+    sys.stdout.write(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
+    sys.stdout.flush()
+
+
 def parallel_encode_mp3s_to_m4a(input_folder, output_folder, max_workers=None):
     """
     1) Finds all .mp3 in input_folder.
@@ -218,6 +227,8 @@ def parallel_encode_mp3s_to_m4a(input_folder, output_folder, max_workers=None):
                 results.append(out_file)
             except Exception as e:
                 print(f"Error encoding {out_file}: {e}")
+
+            print_progress_bar(len(results), len(mp3_files), out_file)
 
     # Return sorted list of .m4a files
     return sorted(results), mp3_files
