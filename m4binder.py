@@ -405,8 +405,12 @@ def fetch_metadata_openlibrary(title=None, author=None, input_folder=None):
 
     # Covers are downloaded (with redirect following) using this format:
     # https://covers.openlibrary.org/b/id/{cover_id}-L.jpg
-    cover_id = work.covers[0] if len(work.covers) > 0 else None
-    cover_url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else None
+    covers = getattr(work, "covers", None) or []
+    cover_id = covers[0] if covers else None
+    cover_url = (
+        f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else None
+    )
+    cover_path = None
     # Fetch the cover image
     if cover_url:
         cover_resp = requests.get(cover_url, allow_redirects=True)
