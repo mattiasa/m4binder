@@ -346,7 +346,7 @@ def get_book_metadata(args, mp3_files):
     if args.title:
         book_meta['title'] = args.title
     if args.author:
-        book_meta['authors'] = args.author
+        book_meta['authors'] = [args.author]
 
     print("[INFO] Final metadata:")
     print(book_meta)
