@@ -24,6 +24,8 @@ from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
 
+import tempfile
+
 try:
     from olclient.openlibrary import OpenLibrary
     import olclient.common as ol_common
@@ -241,63 +243,57 @@ def convert_mp3_chapters_to_m4b(input_folder, output_file, book_metadata=None):
       3) Create concat list
       4) Use ffmpeg to produce final M4B
     """
-    m4a_files, mp3_files = parallel_encode_mp3s_to_m4a(input_folder, input_folder)
 
-    metadata_file = os.path.join(input_folder, "chapters.ffmetadata")
-    list_file = os.path.join(input_folder, "concat_list.txt")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        m4a_files, mp3_files = parallel_encode_mp3s_to_m4a(input_folder, tmpdir)
 
-    create_ffmetadata(mp3_files, metadata_file, book_metadata=book_metadata)
-    create_concat_list(m4a_files, list_file)
+        metadata_file = os.path.join(tmpdir, "chapters.ffmetadata")
+        list_file = os.path.join(tmpdir, "concat_list.txt")
 
-    # 1) Declare the first two inputs (concat list + ffmetadata)
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-loglevel", "error",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", list_file,
-        "-i", metadata_file
-    ]
+        create_ffmetadata(mp3_files, metadata_file, book_metadata=book_metadata)
+        create_concat_list(m4a_files, list_file)
 
-    # 2) If we have cover art, declare it as a third input
-    if book_metadata and 'cover' in book_metadata and book_metadata['cover'] and os.path.exists(book_metadata['cover']):
-        ffmpeg_cmd += ["-i", book_metadata['cover']]
-
-    # 3) Now specify the mapping for each input and output options
-    ffmpeg_cmd += [
-        "-map_metadata", "1",  # the second input (metadata file)
-        "-map", "0:a",         # the first input (audio from concat list)
-        "-c", "copy",
-        "-movflags", "faststart"
-    ]
-
-    # 4) If cover art is present, attach it
-    if book_metadata and 'cover' in book_metadata and book_metadata['cover'] and os.path.exists(book_metadata['cover']):
-        ffmpeg_cmd += [
-            "-map", "2",  # cover is the third input
-            "-c:v", "mjpeg",
-            "-metadata:s:v", 'title="Cover (front)"',
-            "-metadata:s:v", 'comment="Cover (front)"',
-            "-disposition:v:0", "attached_pic"
+        # 1) Declare the first two inputs (concat list + ffmetadata)
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_file,
+            "-i", metadata_file
         ]
 
-    # 5) Finally, append the output filename
-    ffmpeg_cmd.append(output_file)
+        # 2) If we have cover art, declare it as a third input
+        if book_metadata and 'cover' in book_metadata and book_metadata['cover'] and os.path.exists(book_metadata['cover']):
+            ffmpeg_cmd += ["-i", book_metadata['cover']]
 
-    try:
-        subprocess.run(ffmpeg_cmd, check=True)
-        print(f"Created audiobook: {output_file}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error converting MP3 chapters to M4B: {e}")
-    finally:
-        # Clean up
-        if os.path.exists(metadata_file):
-            os.remove(metadata_file)
-        if os.path.exists(list_file):
-            os.remove(list_file)
-        for m4a in m4a_files:
-            os.remove(m4a)
+        # 3) Now specify the mapping for each input and output options
+        ffmpeg_cmd += [
+            "-map_metadata", "1",  # the second input (metadata file)
+            "-map", "0:a",         # the first input (audio from concat list)
+            "-c", "copy",
+            "-movflags", "faststart"
+        ]
+
+        # 4) If cover art is present, attach it
+        if book_metadata and 'cover' in book_metadata and book_metadata['cover'] and os.path.exists(book_metadata['cover']):
+            ffmpeg_cmd += [
+                "-map", "2",  # cover is the third input
+                "-c:v", "mjpeg",
+                "-metadata:s:v", 'title="Cover (front)"',
+                "-metadata:s:v", 'comment="Cover (front)"',
+                "-disposition:v:0", "attached_pic"
+            ]
+
+        # 5) Finally, append the output filename
+        ffmpeg_cmd.append(output_file)
+
+        try:
+            subprocess.run(ffmpeg_cmd, check=True)
+            print(f"Created audiobook: {output_file}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error converting MP3 chapters to M4B: {e}")
 
 def get_book_metadata(args, mp3_files):
     """
