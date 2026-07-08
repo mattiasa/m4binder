@@ -332,13 +332,25 @@ def get_book_metadata(args, mp3_files):
         print(book_meta)
     else:
         # fallback: embedded cover from first MP3
-        cover_art = extract_embedded_cover_art(mp3_files[0])
         book_meta = {
             "title": args.title or default_title,
             "authors": [args.author or default_author],
             "publisher": "",
             "cover": cover_art
         }
+
+    if not book_meta.get('cover'):
+        book_meta['cover'] = extract_embedded_cover_art(mp3_files[0])
+
+    # If we were given a title or author on the command line, use that
+    if args.title:
+        book_meta['title'] = args.title
+    if args.author:
+        book_meta['authors'] = args.author
+
+    print("[INFO] Final metadata:")
+    print(book_meta)
+
     return book_meta
 
 def fetch_metadata_google_books(title=None, author=None, isbn=None, api_key=None):
